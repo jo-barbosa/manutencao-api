@@ -10,54 +10,9 @@ if user:
 else:
     st.caption("Visão geral em tempo real da fábrica. Inicie sessão na barra lateral para aceder a todas as funcionalidades de manutenção.")
 
-# 1. Obter Dados de Métricas Rápidas
-sistemas = api_client.get_sistemas_status()
-acoes = api_client.get_acoes()
-
-total_sistemas = len(sistemas)
-parados = sum(1 for s in sistemas if s.get("estado") == "PARADO")
-degradados = sum(1 for s in sistemas if s.get("estado") == "DEGRADADO")
-operacionais = sum(1 for s in sistemas if s.get("estado") == "OPERACIONAL")
-acoes_abertas = sum(1 for a in acoes if a.get("status") == "ABERTA")
-
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Equipamentos Totais", total_sistemas)
-col2.metric("🟢 Operacionais", operacionais)
-col3.metric("🟡 Degradados", degradados)
-col4.metric("🔴 Parados", parados)
-col5.metric("🛠️ Ações Abertas", acoes_abertas)
-
-st.markdown("---")
-
-# 2. Tabela de Estado dos Equipamentos em Tempo Real
-st.subheader("🏭 Estado dos Equipamentos em Tempo Real")
-
-if sistemas:
-    def cor_estado(estado):
-        if estado == "PARADO":
-            return "🔴 PARADO"
-        elif estado == "DEGRADADO":
-            return "🟡 DEGRADADO"
-        return "🟢 OPERACIONAL"
-
-    tabela_dados = []
-    for item in sistemas:
-        tabela_dados.append({
-            "ID": item["id"],
-            "Equipamento / Sistema": item["nome_sistema"],
-            "Estado Atual": cor_estado(item["estado"]),
-            "Linha": item["linha"],
-            "Fábrica": item["fabrica"],
-            "Fornecedor": item["fornecedor"]
-        })
-
-    st.dataframe(tabela_dados, use_container_width=True, hide_index=True)
-else:
-    st.info("Nenhum sistema registado na base de dados.")
-
-st.markdown("---")
-
-# 3. PONTO DE SITUAÇÃO (PDS) - Dinâmico consoante o estado de Login
+# ==========================================
+# 1º SECÇÃO: PONTO DE SITUAÇÃO (PDS)
+# ==========================================
 if not user:
     # 🏢 SEM LOGIN: Exibe o PDS Geral da Fábrica
     st.subheader("🏢 Ponto de Situação Executivo da Fábrica (PDS Geral)")
@@ -99,3 +54,54 @@ else:
             st.markdown(st.session_state["pds_operador_texto"])
     else:
         st.info(f"Clique no botão acima para gerar o teu briefing personalizado de turno, {user.get('nome')}.")
+
+st.markdown("---")
+
+# ==========================================
+# 2º SECÇÃO: SEMÁFOROS / MÉTRICAS DOS EQUIPAMENTOS
+# ==========================================
+sistemas = api_client.get_sistemas_status()
+acoes = api_client.get_acoes()
+
+total_sistemas = len(sistemas)
+parados = sum(1 for s in sistemas if s.get("estado") == "PARADO")
+degradados = sum(1 for s in sistemas if s.get("estado") == "DEGRADADO")
+operacionais = sum(1 for s in sistemas if s.get("estado") == "OPERACIONAL")
+acoes_abertas = sum(1 for a in acoes if a.get("status") == "ABERTA")
+
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("Equipamentos Totais", total_sistemas)
+col2.metric("🟢 Operacionais", operacionais)
+col3.metric("🟡 Degradados", degradados)
+col4.metric("🔴 Parados", parados)
+col5.metric("🛠️ Ações Abertas", acoes_abertas)
+
+st.markdown("---")
+
+# ==========================================
+# 3º SECÇÃO: LISTA DOS EQUIPAMENTOS EM TEMPO REAL
+# ==========================================
+st.subheader("🏭 Estado dos Equipamentos em Tempo Real")
+
+if sistemas:
+    def cor_estado(estado):
+        if estado == "PARADO":
+            return "🔴 PARADO"
+        elif estado == "DEGRADADO":
+            return "🟡 DEGRADADO"
+        return "🟢 OPERACIONAL"
+
+    tabela_dados = []
+    for item in sistemas:
+        tabela_dados.append({
+            "ID": item["id"],
+            "Equipamento / Sistema": item["nome_sistema"],
+            "Estado Atual": cor_estado(item["estado"]),
+            "Linha": item["linha"],
+            "Fábrica": item["fabrica"],
+            "Fornecedor": item["fornecedor"]
+        })
+
+    st.dataframe(tabela_dados, use_container_width=True, hide_index=True)
+else:
+    st.info("Nenhum sistema registado na base de dados.")
