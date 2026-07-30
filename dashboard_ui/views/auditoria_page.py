@@ -1,0 +1,2 @@
+from dashboard_ui.views.auditoria_view import render_auditoria_view
+render_auditoria_view()

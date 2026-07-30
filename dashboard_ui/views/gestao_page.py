@@ -1,0 +1,2 @@
+from dashboard_ui.views.gestao_acoes_view import render_gestao_acoes_view
+render_gestao_acoes_view()

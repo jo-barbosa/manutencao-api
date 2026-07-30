@@ -22,7 +22,7 @@ def render_auditoria_view():
     st.markdown("---")
     st.subheader("Linha do Tempo Recente")
 
-    for log in logs[:15]:  # Mostrar os últimos 15 registos em estilo feed
+    for log in logs[:15]:
         ts = log.get("timestamp", "").replace("T", " ")[:19]
         user = log.get("utilizador_email", "Desconhecido")
         acao = log.get("acao_realizada", "AÇÃO")
@@ -30,9 +30,7 @@ def render_auditoria_view():
 
         icon = "🟢" if "CRIAR" in acao else ("🟡" if "EDITAR" in acao else "🔵")
 
-        st.markdown(f"""
-        <div style="border-left: 3px solid #4fc3f7; padding-left: 10px; margin-bottom: 12px;">
-            <span style="font-size: 0.85em; color: #888;">⏱️ {ts} | 👤 {user}</span><br/>
-            <strong>{icon} {acao}</strong>: {detalhes}
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(f"**{icon} {acao}** — {detalhes}")
+            st.caption(f"⏱️ {ts} | 👤 {user}")
+

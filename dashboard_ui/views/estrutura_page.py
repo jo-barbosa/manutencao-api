@@ -1,0 +1,2 @@
+from dashboard_ui.views.estrutura_view import render_estrutura_view
+render_estrutura_view()

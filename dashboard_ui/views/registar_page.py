@@ -1,0 +1,2 @@
+from dashboard_ui.views.registar_acao_view import render_registar_acao_view
+render_registar_acao_view()

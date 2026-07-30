@@ -77,19 +77,20 @@ def render_analise_status_view():
             st.info("Nenhuma ação corresponde aos critérios de pesquisa selecionados.")
         else:
             for acao in acoes:
-                status_color = "🔴" if acao.get("impacto") == "TOTAL" else ("🟡" if acao.get("impacto") == "PARCIAL" else "🟢")
-                st.markdown(f"""
-                <div style="border: 1px solid #444; padding: 12px; border-radius: 8px; margin-bottom: 10px; background-color: #1e1e1e;">
-                    <h4 style="margin: 0; color: #4fc3f7;">{status_color} Ação #{acao['id']} - [{acao.get('status')}]</h4>
-                    <p style="margin: 4px 0;"><strong>Descrição:</strong> {acao.get('descricao')}</p>
-                    <p style="margin: 4px 0; font-size: 0.9em; color: #aaa;">
-                        <strong>Sistema ID:</strong> #{acao.get('sistema_id')} | 
-                        <strong>Impacto:</strong> {acao.get('impacto')} | 
-                        <strong>Responsável ID:</strong> #{acao.get('responsavel_id')}
-                    </p>
-                    <p style="margin: 4px 0; font-size: 0.85em; color: #888;">
-                        📅 Criação: {acao.get('data_criacao')} | Previsão: {acao.get('data_prevista_conclusao')}
-                        {f" | 🏁 Conclusão: {acao.get('data_conclusao')}" if acao.get('data_conclusao') else ""}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+                status_icon = "🔴" if acao.get("impacto") == "TOTAL" else ("🟡" if acao.get("impacto") == "PARCIAL" else "🟢")
+                with st.container(border=True):
+                    col_t1, col_t2 = st.columns([3, 1])
+                    with col_t1:
+                        st.markdown(f"#### {status_icon} Ação #{acao['id']} — `{acao.get('status')}`")
+                    with col_t2:
+                        st.markdown(f"**Impacto:** `{acao.get('impacto')}`")
+
+                    st.markdown(f"**Descrição:** {acao.get('descricao')}")
+
+                    data_conclusao_str = f" | 🏁 Conclusão: {acao.get('data_conclusao')}" if acao.get("data_conclusao") else ""
+                    st.caption(
+                        f"**Sistema ID:** #{acao.get('sistema_id')} | "
+                        f"**Responsável ID:** #{acao.get('responsavel_id')} | "
+                        f"📅 Criação: {acao.get('data_criacao')} | Previsão: {acao.get('data_prevista_conclusao')}{data_conclusao_str}"
+                    )
+

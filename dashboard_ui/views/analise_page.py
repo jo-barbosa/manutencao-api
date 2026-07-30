@@ -1,0 +1,2 @@
+from dashboard_ui.views.analise_status_view import render_analise_status_view
+render_analise_status_view()
