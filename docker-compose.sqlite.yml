@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Backend API com SQLite
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manutencao-api-sqlite
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///database.db
+      - JWT_SECRET=8f3c2a9d1e4b7a6c5d8e2f1a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+      - MASTER_RESET_KEY=fabrica_master_secret_2026
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    volumes:
+      - .:/app
+
+  # Frontend Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manutencao-streamlit-sqlite
+    restart: always
+    command: streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000/api
+    depends_on:
+      - api

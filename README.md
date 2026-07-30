@@ -7,10 +7,12 @@ Sistema de gestão e acompanhamento de manutenção industrial para unidades fab
 ## 🚀 Tecnologias Utilizadas
 
 - **Backend (API REST):** Python 3.12, [FastAPI](https://fastapi.tiangolo.com/), [SQLModel](https://sqlmodel.tiangolo.com/) (SQLAlchemy + Pydantic), Uvicorn.
-- **Frontend (Interface de Utilizador):** [Streamlit](https://streamlit.io/) (Navegação Dinâmica Multipágina com `st.navigation`).
+- **Frontend (Interface de Utilizador):** [Streamlit](https://streamlit.io/) (Navegação Dinâmica Multipágina).
 - **Segurança & Autenticação:** HTTP Bearer JWT (`python-jose`), Encriptação de passwords (`bcrypt`).
-- **Inteligência Artificial (PDS):** Integração via OpenRouter API (Llama 3.3, Gemini 2.5, DeepSeek) com fallback automático.
-- **Base de Dados:** SQLite local (`database.db`).
+- **Bases de Dados Suportadas:**
+  - 🛠️ **SQLite** (Desenvolvimento Local Padrão)
+  - 🐘 **PostgreSQL 16** (Produção Docker / Windows Server)
+- **Containerização:** Docker & Docker Compose.
 
 ---
 
@@ -21,89 +23,91 @@ manutencao-api/
 │
 ├── app/                        # 🔌 Backend FastAPI
 │   ├── main.py                 # Ponto de entrada e configuração dos routers REST
-│   ├── database.py             # Ligação e motor da base de dados SQLite
+│   ├── database.py             # Suporte híbrido a PostgreSQL e SQLite via DATABASE_URL
 │   ├── models.py               # Modelos de dados e enums (SQLModel)
 │   ├── security.py             # Encriptação Bcrypt e emissão/validação de JWT
-│   ├── seed.py                 # Script de povoamento inicial de dados de teste
-│   ├── routers/
-│   │   ├── acoes.py            # Criar, editar, listar e fechar ações (recálculo de estado)
-│   │   ├── auth.py             # Login, perfil, registo e alteração de password
-│   │   ├── superusers.py       # Listagem de operadores/técnicos
-│   │   ├── estrutura.py        # Gestão de Fábricas, Linhas, Sistemas e Fornecedores
-│   │   ├── auditoria.py        # Histórico cronológico de operações
-│   │   └── pds.py              # Ponto de Situação inteligente (IA)
-│   └── services/
-│       └── ai_service.py       # Serviço de IA via OpenRouter com fallback automático
+│   ├── seed.py                 # Script de povoamento inicial de dados
+│   ├── routers/                # Endpoints (ações, auth, superusers, estrutura, auditoria, pds)
+│   └── services/               # Serviço de IA via OpenRouter com fallback automático
 │
 ├── dashboard_ui/               # 📦 Package Frontend Modular em Streamlit
-│   ├── home.py                 # Vista principal do Dashboard (Métricas, PDS e Tabela)
-│   ├── api_client.py           # Cliente HTTP centralizado para comunicação com a API
-│   ├── auth_guard.py           # Guarda de segurança para páginas restritas
-│   ├── components/
-│   │   └── cascade_selectors.py # Dropdowns encadeados (Fábrica -> Linha -> Sistema)
-│   └── views/
-│       ├── pds_view.py          # Relatórios executivos e briefing de operador
-│       ├── registar_acao_view.py # Form de registo de nova ação de manutenção
-│       ├── gestao_acoes_view.py  # Edição e encerramento de avarias
-│       ├── analise_status_view.py# Consulta avançada e cartões de intervenções
-│       ├── estrutura_view.py     # Criação de equipamentos, linhas e fornecedores
-│       └── auditoria_view.py     # Feed cronológico de auditoria
-│
 ├── dashboard.py                # Ponto de entrada da aplicação Streamlit (Multipágina)
-├── requirements.txt            # Ficheiro de dependências Python
-└── docs-help/                  # Documentação Técnica
-    ├── endpoints-api.md        # Documentação completa de todos os endpoints REST
-    └── sql-help.md             # Guia de comandos SQL e SQLite
+├── Dockerfile                  # Containerização de Produção
+├── docker-compose.yml          # Orquestração Produção (PostgreSQL + API + Dashboard)
+├── docker-compose.sqlite.yml   # Orquestração Local com SQLite
+├── requirements.txt            # Dependências Python (incluindo psycopg2-binary)
+└── docs-help/                  # Documentação Técnica e Endpoints
 ```
 
 ---
 
-## ⚡ Instalação e Execução
+## 🐘 Suporte Híbrido a Bases de Dados (SQLite vs PostgreSQL)
 
-### 1. Criar e Ativar Ambiente Virtual
+O ficheiro `app/database.py` deteta automaticamente o tipo de BD através da variável de ambiente `DATABASE_URL`:
 
-```bash
-# Na raiz da pasta manutencao-api
-python3 -m venv .venv
+- **Desenvolvimento (SQLite por defeito):**
+  ```env
+  DATABASE_URL=sqlite:///database.db
+  ```
+- **Produção (PostgreSQL em Docker/Windows Server):**
+  ```env
+  DATABASE_URL=postgresql://postgres:fabrica_password_2026@postgres-db:5432/maintenancedb
+  ```
 
-# Ativar no Linux/macOS:
-source .venv/bin/activate
+---
+
+## 🐳 Implantação em Produção com Docker (Windows Server)
+
+### Requisitos no Windows Server:
+1. Instalar o **Docker Desktop para Windows** (ou Docker Engine no WSL2/Hyper-V).
+2. Ativar o suporte a **Linux Containers**.
+
+### 1. Iniciar toda a Infraestrutura (PostgreSQL + API + Dashboard)
+Na pasta do projeto, execute no PowerShell ou CMD:
+
+```powershell
+docker compose up -d --build
 ```
 
-### 2. Instalar Dependências
+Este comando vai iniciar 3 contentores em segundo plano:
+- 🐘 `manutencao-postgres` (PostgreSQL 16 na porta `5432` com volume persistente `pgdata_manutencao`)
+- 🔌 `manutencao-api-backend` (API FastAPI na porta `8000`)
+- 🎨 `manutencao-streamlit-dashboard` (Dashboard Streamlit na porta `8501`)
 
+### 2. Povoar Dados Iniciais no PostgreSQL (Seed)
+Após subir os contentores, execute o script de seed dentro do contentor da API:
+
+```powershell
+docker exec -it manutencao-api-backend python -m app.seed
+```
+
+### 3. Testes Rápidos em Docker com SQLite (Sem Postgres)
+Se quiser testar a aplicação em Docker usando SQLite:
+
+```powershell
+docker compose -f docker-compose.sqlite.yml up -d --build
+```
+
+---
+
+## 💻 Execução Local sem Docker
+
+### 1. Instalar Dependências
 ```bash
+python -m venv .venv
+source .venv/bin/activate  # ou .venv\Scripts\activate no Windows
 pip install -r requirements.txt
 ```
 
-### 3. Povoar a Base de Dados (Opcional)
-
-Para carregar dados de exemplo (Fábricas, Linhas, Sistemas, Fornecedores e Utilizadores):
-
-```bash
-python -m app.seed
-```
-
----
-
-## ⚙️ Como Iniciar as Aplicações
-
-### 1. Iniciar o Backend (API FastAPI)
-Abra um terminal e execute:
-
-```bash
-./.venv/bin/python -m uvicorn app.main:app --reload --port 8000
-```
-- **API REST Base:** `http://localhost:8000/api`
-- **Documentação Swagger Interativa:** `http://localhost:8000/docs`
-
-### 2. Iniciar o Frontend (Dashboard Streamlit)
-Noutro terminal, execute:
-
-```bash
-./.venv/bin/streamlit run dashboard.py
-```
-- **Painel Web:** `http://localhost:8501`
+### 2. Iniciar Serviços
+- **Backend FastAPI:**
+  ```bash
+  python -m uvicorn app.main:app --reload --port 8000
+  ```
+- **Frontend Streamlit:**
+  ```bash
+  python -m streamlit run dashboard.py
+  ```
 
 ---
 
@@ -114,35 +118,3 @@ Noutro terminal, execute:
 | **Operador Principal** | `jorge.barbosa@inter.ikea.com` | `dummy` |
 | **Técnico de Manutenção** | `helder.vieira@inter.ikea.com` | `dummy` |
 | **Técnico de Manutenção** | `helio.machado1@inter.ikea.com` | `dummy` |
-
----
-
-## 📋 Resumo dos Endpoints da API
-
-| Método | Endpoint | Descrição |
-| :---: | :--- | :--- |
-| `POST` | `/api/auth/login` | Autenticação e emissão de Token JWT |
-| `GET` | `/api/superusers` | Lista todos os operadores registados |
-| `GET` | `/api/sistemas/status` | Tabela achatada do estado dos equipamentos |
-| `POST` | `/api/acoes` | Regista nova ação e recalcula estado do equipamento |
-| `PUT` | `/api/acoes/{id}/fechar` | Encerra ação e repõe estado a **OPERACIONAL** |
-| `PUT` | `/api/acoes/{id}` | Edita dados de uma ação existente |
-| `GET` | `/api/pds/geral` | Resumo executivo da fábrica via IA |
-| `GET` | `/api/pds/operador/{id}` | Briefing personalizado do turno do operador via IA |
-| `GET` | `/api/auditoria` | Histórico cronológico de operações efetuadas |
-
-*(Consulte a documentação completa em [`docs-help/endpoints-api.md`](docs-help/endpoints-api.md))*
-
----
-
-## 💡 Principais Funcionalidades da Interface
-
-1. **Dashboard Inicial (Público/Autenticado):**
-   - **PDS Inteligente (1.º lugar):** PDS Geral da fábrica sem login; PDS do Operador após login.
-   - **Semáforos de Estado (2.º lugar):** Contagem de equipamentos Operacionais, Degradados, Parados e Ações Abertas.
-   - **Lista de Equipamentos (3.º lugar):** Tabela em tempo real de todos os sistemas fabris.
-2. **Navegação Dinâmica (Sidebar):**
-   - Antes do login, a barra lateral exibe apenas a opção `Dashboard` e o formulário de login.
-   - Após o login, são desbloqueadas as secções de **Operação Fabril** e **Gestão & Consulta**.
-3. **Gestão de Ações:**
-   - Encerramento de avarias com registo de data e comentário, recalculando automaticamente se a máquina regressa a `OPERACIONAL`.

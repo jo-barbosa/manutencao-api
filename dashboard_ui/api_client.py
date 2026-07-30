@@ -1,8 +1,10 @@
-from typing import Any, Dict, List, Optional
-import requests
-import streamlit as st
+import os
+from dotenv import load_dotenv
 
-API_URL = "http://127.0.0.1:8000/api"
+load_dotenv()
+
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api")
+
 
 
 def get_headers() -> Dict[str, str]:

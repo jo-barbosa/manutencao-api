@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 1. Base de Dados PostgreSQL (Produção)
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: manutencao-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: fabrica_password_2026
+      POSTGRES_DB: maintenancedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_manutencao:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Backend API (FastAPI)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manutencao-api-backend
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:fabrica_password_2026@postgres-db:5432/maintenancedb
+      - JWT_SECRET=8f3c2a9d1e4b7a6c5d8e2f1a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+      - MASTER_RESET_KEY=fabrica_master_secret_2026
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  # 3. Frontend Dashboard (Streamlit)
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manutencao-streamlit-dashboard
+    restart: always
+    command: streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000/api
+    depends_on:
+      - api
+
+volumes:
+  pgdata_manutencao:
+    driver: local
