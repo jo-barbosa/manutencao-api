@@ -1,20 +1,25 @@
 import os
+import httpx
 from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
 
+# 👈 2. Criar um cliente HTTP que ignora a verificação SSL da rede da fábrica
+http_client = httpx.Client(verify=False)
+
 # Inicializa o cliente apontando para a API do OpenRouter
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY"),
+    http_client=http_client
 )
 
 # Modelos Gratuitos recomendados no OpenRouter:
 # - "meta-llama/llama-3.3-70b-instruct:free"
 # - "google/gemini-2.5-flash:free"
 # - "deepseek/deepseek-r1:free"
-MODELO_FREE = "meta-llama/llama-3.3-70b-instruct:free"
+MODELO_FREE = "openrouter/free"
 
 
 def gerar_pds_geral_ia(dados_sistemas: list) -> str | None:

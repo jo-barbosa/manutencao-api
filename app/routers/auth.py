@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials  # 👈 Atualizado aqui
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from app.database import get_session
@@ -15,7 +15,7 @@ from app.security import (
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+security_scheme = HTTPBearer()
 
 
 # ==========================================
@@ -48,7 +48,12 @@ class ResetPasswordRequest(BaseModel):
 # DEPENDÊNCIA DE AUTENTICAÇÃO
 # ==========================================
 
-def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> Superuser:
+def get_current_user(
+        auth: HTTPAuthorizationCredentials = Depends(security_scheme),  # 👈 Recebe as credenciais Bearer
+        session: Session = Depends(get_session)
+) -> Superuser:
+    token = auth.credentials  # 👈 Extrai o token
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Token inválido ou expirado",
@@ -68,8 +73,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
         raise credentials_exception
 
     return user
-
-
 # ==========================================
 # ENDPOINTS
 # ==========================================

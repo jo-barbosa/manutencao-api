@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta, date
 from sqlmodel import Session, select
 from app.security import hash_password
 from app.database import engine, create_db_and_tables
@@ -90,21 +90,32 @@ def popular_base_de_dados():
         # D. AÇÕES DE MANUTENÇÃO (Exemplos Iniciais)
         # ==========================================
         acao1 = Acao(
-            comentario="Ação de teste",
+            descricao="Ação de teste",
             status=StatusAcao.ABERTA,
             impacto=Impacto.NENHUM,
-            data_criacao=datetime.now(),
-            data_prevista_conclusao=datetime.now() + timedelta(days=2),
+            data_criacao=date.today(),
+            data_prevista_conclusao=date.today() + timedelta(days=2),
             sistema_id=sistema1.id,
             responsavel_id=user1.id
         )
 
         acao2 = Acao(
-            comentario="Ação de teste 2",
+            descricao="Ação de teste 2",
             status=StatusAcao.ABERTA,
             impacto=Impacto.NENHUM,
-            data_criacao=datetime.now(),
-            data_prevista_conclusao=datetime.now() + timedelta(hours=12),
+            data_criacao=date.today(),
+            data_prevista_conclusao=date.today() + timedelta(hours=12),
+            sistema_id=sistema2.id,
+            responsavel_id=user1.id
+        )
+
+        ##acao critica teste
+        acao3 = Acao(
+            descricao="Troca de lampada maquia 7 lado direito, urgente.",
+            status=StatusAcao.ABERTA,
+            impacto=Impacto.TOTAL,
+            data_criacao=date.today(),
+            data_prevista_conclusao=date.today() + timedelta(hours=12),
             sistema_id=sistema2.id,
             responsavel_id=user1.id
         )
@@ -112,6 +123,7 @@ def popular_base_de_dados():
 
         session.add(acao1)
         session.add(acao2)
+        session.add(acao3)
         session.commit()
 
         print("✅ Base de dados populada com sucesso!")

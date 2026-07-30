@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
@@ -96,14 +96,14 @@ class Sistema(SQLModel, table=True):
 
 class Acao(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    comentario: Optional[str] = None
+    descricao: str
     status: StatusAcao = Field(default=StatusAcao.ABERTA)
     impacto: Impacto = Field(default=Impacto.NENHUM)
 
     # Value Object: IntervaloTempo (Achatado em colunas datetime)
-    data_criacao: datetime = Field(default_factory=datetime.now)
-    data_prevista_conclusao: Optional[datetime] = None
-    data_conclusao: Optional[datetime] = None
+    data_criacao: date = Field(default_factory=date.today)
+    data_prevista_conclusao: Optional[date] = None
+    data_conclusao: Optional[date] = None
 
     # Ligação ao Sistema (FK)
     sistema_id: Optional[int] = Field(default=None, foreign_key="sistema.id")

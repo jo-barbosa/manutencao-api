@@ -19,7 +19,7 @@ def obter_pds_geral(session: Session = Depends(get_session)):
         dados_para_ia.append({
             "sistema": acao.sistema.nome if acao.sistema else "Desconhecido",
             "impacto": acao.impacto,
-            "comentario": acao.comentario
+            "descricao": acao.descricao
         })
 
     # Chama a IA
@@ -41,7 +41,7 @@ def obter_pds_operador(superuser_id: int, session: Session = Depends(get_session
     ).all()
 
     acoes_formatadas = [
-        {"sistema": a.sistema.nome if a.sistema else "N/A", "comentario": a.comentario, "impacto": a.impacto}
+        {"sistema": a.sistema.nome if a.sistema else "N/A", "descricao": a.descricao, "impacto": a.impacto}
         for a in acoes_user
     ]
 
