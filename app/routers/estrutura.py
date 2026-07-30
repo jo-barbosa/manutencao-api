@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, select, SQLModel
 from app.database import get_session
 from app.models import Fabrica, Linha, Sistema, Fornecedor, RegistoAuditoria, Superuser
 from app.routers.auth import get_current_user
@@ -121,6 +121,17 @@ def criar_sistema(
     return sistema
 
 
+# Schema para atualização de Fornecedor
+class FornecedorUpdate(SQLModel):
+    nome: Optional[str] = None
+    contacto: Optional[str] = None
+
+
+@router.get("/sistemas", response_model=List[Sistema])
+def listar_sistemas(session: Session = Depends(get_session)):
+    return session.exec(select(Sistema)).all()
+
+
 @router.post("/fornecedores", response_model=Fornecedor, status_code=status.HTTP_201_CREATED)
 def criar_fornecedor(
         fornecedor: Fornecedor,
@@ -139,3 +150,33 @@ def criar_fornecedor(
     session.commit()
     session.refresh(fornecedor)
     return fornecedor
+
+
+@router.put("/fornecedores/{id}", response_model=Fornecedor)
+def editar_fornecedor(
+    id: int,
+    fornecedor_in: FornecedorUpdate,
+    session: Session = Depends(get_session),
+    current_user: Superuser = Depends(get_current_user)
+):
+    fornecedor = session.get(Fornecedor, id)
+    if not fornecedor:
+        raise HTTPException(status_code=404, detail="Fornecedor não encontrado")
+
+    update_data = fornecedor_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(fornecedor, field, value)
+
+    session.add(fornecedor)
+
+    log = RegistoAuditoria(
+        utilizador_email=current_user.email,
+        acao_realizada="EDITAR_FORNECEDOR",
+        detalhes=f"Atualizado o fornecedor ID {id} ('{fornecedor.nome}')"
+    )
+    session.add(log)
+
+    session.commit()
+    session.refresh(fornecedor)
+    return fornecedor
+

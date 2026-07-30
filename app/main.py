@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.database import create_db_and_tables
 import app.models
-from app.routers import estrutura, acoes, pds, auth, auditoria
+from app.routers import estrutura, acoes, pds, auth, auditoria, superusers
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -31,10 +31,12 @@ app.add_middleware(
 
 #registar os routers da FastAPI
 app.include_router(auth.router)
+app.include_router(superusers.router)
 app.include_router(estrutura.router)
 app.include_router(acoes.router)
 app.include_router(pds.router)
-app.include_router(auditoria.router) # 👈 Incluir nas rotas
+app.include_router(auditoria.router)
+
 
 
 @app.get("/")

@@ -1,29 +1,40 @@
 import os
-import httpx
 from dotenv import load_dotenv
-from openai import OpenAI
 
 load_dotenv()
 
-# 👈 2. Criar um cliente HTTP que ignora a verificação SSL da rede da fábrica
-http_client = httpx.Client(verify=False)
+try:
+    import httpx
+    from openai import OpenAI
 
-# Inicializa o cliente apontando para a API do OpenRouter
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    http_client=http_client
-)
+    http_client = httpx.Client(verify=False)
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPENROUTER_API_KEY", "dummy"),
+        http_client=http_client
+    )
+    AI_AVAILABLE = True
+except Exception:
+    AI_AVAILABLE = False
+    client = None
 
-# Modelos Gratuitos recomendados no OpenRouter:
-# - "meta-llama/llama-3.3-70b-instruct:free"
-# - "google/gemini-2.5-flash:free"
-# - "deepseek/deepseek-r1:free"
 MODELO_FREE = "openrouter/free"
 
 
 def gerar_pds_geral_ia(dados_sistemas: list) -> str | None:
-    """Gera um resumo executivo de toda a fábrica usando o OpenRouter."""
+    """Gera um resumo executivo de toda a fábrica usando o OpenRouter com fallback automático."""
+    if not AI_AVAILABLE or not os.getenv("OPENROUTER_API_KEY"):
+        parados = [s for s in dados_sistemas if s.get("impacto") == "TOTAL"]
+        degradados = [s for s in dados_sistemas if s.get("impacto") == "PARCIAL"]
+
+        res = "### 🏢 Ponto de Situação da Fábrica (Relatório Direto)\n\n"
+        if parados:
+            res += f"🔴 **Sistemas Parados ({len(parados)}):** " + ", ".join(s.get("sistema", "") for s in parados) + "\n\n"
+        if degradados:
+            res += f"🟡 **Sistemas Degradados ({len(degradados)}):** " + ", ".join(s.get("sistema", "") for s in degradados) + "\n\n"
+        if not parados and not degradados:
+            res += "🟢 **Todos os sistemas operacionais.**\n\n"
+        return res
 
     prompt = f"""
     És um assistente sénior de manutenção industrial numa fábrica.
@@ -38,18 +49,21 @@ def gerar_pds_geral_ia(dados_sistemas: list) -> str | None:
     Usa um tom profissional, sucinto e focado em prioridades operacionais.
     """
 
-    completion = client.chat.completions.create(
-        model=MODELO_FREE,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    return completion.choices[0].message.content
+    try:
+        completion = client.chat.completions.create(
+            model=MODELO_FREE,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"⚠️ Relatório Automático (OpenRouter Indisponível): {e}"
 
 
 def gerar_pds_operador_ia(nome_operador: str, acoes_operador: list) -> str | None:
-    """Gera uma mensagem personalizada de boas-vindas para o operador."""
+    """Gera uma mensagem personalizada para o operador com fallback."""
+    if not AI_AVAILABLE or not os.getenv("OPENROUTER_API_KEY"):
+        count = len(acoes_operador)
+        return f"### 👤 Boas-vindas, {nome_operador}!\n\nTens **{count}** ações de manutenção atribuídas ao teu turno."
 
     prompt = f"""
     És um assistente de manutenção. O operador/técnico '{nome_operador}' acabou de fazer login.
@@ -62,11 +76,11 @@ def gerar_pds_operador_ia(nome_operador: str, acoes_operador: list) -> str | Non
     - Se não tiver tarefas pendentes, deseja-lhe um bom turno sem avarias.
     """
 
-    completion = client.chat.completions.create(
-        model=MODELO_FREE,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    return completion.choices[0].message.content
+    try:
+        completion = client.chat.completions.create(
+            model=MODELO_FREE,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"### 👤 Olá {nome_operador}!\n\nTens {len(acoes_operador)} ações pendentes."
