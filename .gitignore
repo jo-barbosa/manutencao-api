@@ -1,0 +1,30 @@
+# Ambientes Virtuais (Virtualenv)
+venv/
+.venv/
+env/
+ENV/
+
+# Caches e Ficheiros Compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ficheiros do PyCharm e IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Base de Dados Local (SQLite)
+*.db
+*.sqlite3
+database.db
+
+# Ficheiros de Variáveis de Ambiente e Chaves Privadas
+.env
+.env.local
+
+# Ficheiros do Sistema Operativo
+.DS_Store
+Thumbs.db
