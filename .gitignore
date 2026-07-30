@@ -28,3 +28,6 @@ database.db
 # Ficheiros do Sistema Operativo
 .DS_Store
 Thumbs.db
+
+# Ficheiros de ajuda
+/docs-help
