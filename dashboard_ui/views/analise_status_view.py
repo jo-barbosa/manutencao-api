@@ -25,15 +25,23 @@ def render_analise_status_view():
                     return "🟡 DEGRADADO"
                 return "🟢 OPERACIONAL"
 
+            # Ordenar por fábrica, linha e depois sistema
+            dados_ordenados = sorted(
+                dados,
+                key=lambda x: (
+                    (x.get("fabrica") or "").lower(),
+                    (x.get("linha") or "").lower(),
+                    (x.get("nome_sistema") or "").lower()
+                )
+            )
+
             tabela_dados = []
-            for item in dados:
+            for item in dados_ordenados:
                 tabela_dados.append({
-                    "ID": item["id"],
+                    "Fábrica": item["fabrica"],
+                    "Linha": item["linha"],
                     "Sistema": item["nome_sistema"],
                     "Estado Atual": cor_estado(item["estado"]),
-                    "Linha": item["linha"],
-                    "Fábrica": item["fabrica"],
-                    "Fornecedor": item["fornecedor"]
                 })
 
             st.dataframe(tabela_dados, use_container_width=True)
@@ -54,11 +62,24 @@ def render_analise_status_view():
         with col2:
             superusers = api_client.get_superusers()
             su_options = {"Todos os Operadores": None}
+            su_dict = {}
             for su in superusers:
                 su_options[f"{su['nome']} ({su['email']})"] = su["id"]
+                su_dict[su["id"]] = su["nome"]
 
             sel_su_label = st.selectbox("Técnico Responsável", options=list(su_options.keys()), key="analise_su")
             selected_su_id = su_options[sel_su_label]
+
+        # Mapeamento dos sistemas para obter nome, linha e fábrica por ID
+        sistemas_status = api_client.get_sistemas_status()
+        sistemas_dict = {
+            s["id"]: {
+                "nome": s.get("nome_sistema", "N/A"),
+                "linha": s.get("linha", "N/A"),
+                "fabrica": s.get("fabrica", "N/A")
+            }
+            for s in sistemas_status
+        }
 
         # Procurar ações e filtrar localmente
         acoes = api_client.get_acoes()
@@ -86,10 +107,21 @@ def render_analise_status_view():
 
                     st.markdown(f"**Descrição:** {acao.get('descricao')}")
 
+                    # Obter dados do sistema e responsável
+                    sis_id = acao.get("sistema_id")
+                    sis_info = sistemas_dict.get(sis_id, {})
+                    sis_nome = sis_info.get("nome", "N/A")
+                    sis_linha = sis_info.get("linha", "N/A")
+                    sis_fabrica = sis_info.get("fabrica", "N/A")
+                    sistema_str = f"{sis_nome} ({sis_linha} - {sis_fabrica})" if sis_info else f"Sistema #{sis_id}"
+
+                    resp_id = acao.get("responsavel_id")
+                    resp_nome = su_dict.get(resp_id, "Não atribuído") if resp_id else "Não atribuído"
+
                     data_conclusao_str = f" | 🏁 Conclusão: {acao.get('data_conclusao')}" if acao.get("data_conclusao") else ""
                     st.caption(
-                        f"**Sistema ID:** #{acao.get('sistema_id')} | "
-                        f"**Responsável ID:** #{acao.get('responsavel_id')} | "
+                        f"**Sistema:** {sistema_str} | "
+                        f"**Responsável:** {resp_nome} | "
                         f"📅 Criação: {acao.get('data_criacao')} | Previsão: {acao.get('data_prevista_conclusao')}{data_conclusao_str}"
                     )
 

@@ -62,6 +62,5 @@ def render_registar_acao_view():
                 resp = api_client.criar_acao(payload)
                 if resp.status_code in (200, 201):
                     st.success("✅ Ação registada com sucesso! O estado do equipamento foi recalculado.")
-                    st.balloons()
                 else:
                     st.error(f"Erro ao registar ação: {resp.text}")
