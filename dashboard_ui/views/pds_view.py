@@ -22,15 +22,15 @@ def render_pds_view():
             st.markdown("---")
             st.markdown(st.session_state["pds_geral_texto"])
         else:
-            st.info("Clica no botão acima para carregar o resumo executivo da operação.")
+            st.info("Clica no botão acima para carregar o resumo.")
 
     with col2:
-        st.subheader("👤 PDS do Teu Turno (Operador)")
+        st.subheader("👤 PDS Pessoal")
         current_user = st.session_state.get("user")
         if current_user:
             user_id = current_user.get("id")
             if st.button(f"🔄 Gerar Briefing para {current_user.get('nome')}", key="btn_pds_op"):
-                with st.spinner("A preparar o teu briefing de turno..."):
+                with st.spinner("A preparar o teu resumo..."):
                     texto_op = api_client.get_pds_operador(user_id)
                     if texto_op:
                         st.session_state["pds_operador_texto"] = texto_op
@@ -41,4 +41,4 @@ def render_pds_view():
                 st.markdown("---")
                 st.markdown(st.session_state["pds_operador_texto"])
             else:
-                st.info("Clica acima para ver a tua mensagem personalizada e tarefas atribuídas.")
+                st.info("Clica acima para ver o teu resumo de ações pendentes.")

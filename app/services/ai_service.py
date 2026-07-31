@@ -27,7 +27,7 @@ def gerar_pds_geral_ia(dados_sistemas: list) -> str | None:
         parados = [s for s in dados_sistemas if s.get("impacto") == "TOTAL"]
         degradados = [s for s in dados_sistemas if s.get("impacto") == "PARCIAL"]
 
-        res = "### 🏢 Ponto de Situação da Fábrica (Relatório Direto)\n\n"
+        res = "### 🏢 Ponto de Situação dos Sistemas\n\n"
         if parados:
             res += f"🔴 **Sistemas Parados ({len(parados)}):** " + ", ".join(s.get("sistema", "") for s in parados) + "\n\n"
         if degradados:
@@ -41,9 +41,9 @@ def gerar_pds_geral_ia(dados_sistemas: list) -> str | None:
     Com base no seguinte estado atual dos sistemas e ações pendentes:
     {dados_sistemas}
 
-    Cria um Ponto de Situação (PDS) Executivo em Markdown, curto e direto ao ponto:
-    1. 🔴 **Sistemas Críticos / Parados** (se existirem).
-    2. 🟡 **Avisos e Degradações** (se existirem).
+    Cria um Ponto de Situação em Markdown, curto e direto ao ponto:
+    1. 🔴 **Sistemas Parados** (se existirem).
+    2. 🟡 **Sistemas Degradados** (se existirem).
     3. 🟢 **Resumo Geral da Operação**.
 
     Usa um tom profissional, sucinto e focado em prioridades operacionais.

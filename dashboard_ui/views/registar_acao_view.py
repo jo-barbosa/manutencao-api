@@ -44,7 +44,7 @@ def render_registar_acao_view():
             index=default_index if superuser_options else 0
         )
 
-        submeter = st.form_submit_button("Submeter Ação de Manutenção")
+        submeter = st.form_submit_button("Submeter Ação")
 
         if submeter:
             if not selected_sistema_id:

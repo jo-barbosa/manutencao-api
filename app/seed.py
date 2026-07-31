@@ -59,14 +59,49 @@ def popular_base_de_dados():
         session.commit()
 
         # 2. Linhas associadas à Fábrica
+        #FOIL
         linha1 = Linha(nome="Linha 1", fabrica_id=fabrica2.id)
         linha2 = Linha(nome="Linha 2", fabrica_id=fabrica2.id)
-        linha3 = Linha(nome="Linha 3", fabrica_id=fabrica2.id)
-        linha4 = Linha(nome="Linha 4", fabrica_id=fabrica2.id)
+        linha10 = Linha(nome="FSL", fabrica_id=fabrica2.id)
+        linha11 = Linha(nome="Complete Line", fabrica_id=fabrica2.id)
+        linha12 = Linha(nome="4Side", fabrica_id=fabrica2.id)
         session.add(linha1)
         session.add(linha2)
-        session.add(linha3)
-        session.add(linha4)
+        session.add(linha10)
+        session.add(linha11)
+        session.add(linha12)
+        #L&P
+        linha5 = Linha(nome="Linha 1", fabrica_id=fabrica3.id)
+        linha6 = Linha(nome="Linha 2", fabrica_id=fabrica3.id)
+        linha7 = Linha(nome="Linha 3", fabrica_id=fabrica3.id)
+        linha8 = Linha(nome="Masterframe", fabrica_id=fabrica3.id)
+        linha9 = Linha(nome="Coldpress Auto", fabrica_id=fabrica3.id)
+        session.add(linha5)
+        session.add(linha6)
+        session.add(linha7)
+        session.add(linha8)
+        session.add(linha9)
+        #PFF - 12 linhas
+        linha13 = Linha(nome="Linha 57-1", fabrica_id=fabrica1.id)
+        linha14 = Linha(nome="Linha 57-2", fabrica_id=fabrica1.id)
+        linha15 = Linha(nome="Linha 57-3", fabrica_id=fabrica1.id)
+        linha16 = Linha(nome="Linha 58", fabrica_id=fabrica1.id)
+        linha17 = Linha(nome="Linha 27", fabrica_id=fabrica1.id)
+        linha18 = Linha(nome="Linha 22", fabrica_id=fabrica1.id)
+        linha19 = Linha(nome="Linha 25", fabrica_id=fabrica1.id)
+        linha20 = Linha(nome="Linha 21", fabrica_id=fabrica1.id)
+        linha21 = Linha(nome="Linha 37", fabrica_id=fabrica1.id)
+        linha22 = Linha(nome="Linha 52", fabrica_id=fabrica1.id)
+        session.add(linha13)
+        session.add(linha14)
+        session.add(linha15)
+        session.add(linha16)
+        session.add(linha17)
+        session.add(linha18)
+        session.add(linha19)
+        session.add(linha20)
+        session.add(linha21)
+        session.add(linha22)
         session.commit()
 
         # 3. Sistemas associados às Linhas e Fornecedores
@@ -82,49 +117,25 @@ def popular_base_de_dados():
             linha_id=linha2.id,
             fornecedor_id=fornecedor2.id
         )
+        sistema3 = Sistema(
+            nome="Polishapes",
+            estado_atual=EstadoSistema.OPERACIONAL,
+            linha_id=linha8.id,
+            fornecedor_id=fornecedor1.id
+        )
+        sistema4 = Sistema(
+            nome="Polishapes",
+            estado_atual=EstadoSistema.OPERACIONAL,
+            linha_id=linha9.id,
+            fornecedor_id=fornecedor1.id
+        )
         session.add(sistema1)
         session.add(sistema2)
+        session.add(sistema3)
+        session.add(sistema4)
         session.commit()
 
-        # ==========================================
-        # D. AÇÕES DE MANUTENÇÃO (Exemplos Iniciais)
-        # ==========================================
-        acao1 = Acao(
-            descricao="Ação de teste",
-            status=StatusAcao.ABERTA,
-            impacto=Impacto.NENHUM,
-            data_criacao=date.today(),
-            data_prevista_conclusao=date.today() + timedelta(days=2),
-            sistema_id=sistema1.id,
-            responsavel_id=user1.id
-        )
 
-        acao2 = Acao(
-            descricao="Ação de teste 2",
-            status=StatusAcao.ABERTA,
-            impacto=Impacto.NENHUM,
-            data_criacao=date.today(),
-            data_prevista_conclusao=date.today() + timedelta(hours=12),
-            sistema_id=sistema2.id,
-            responsavel_id=user1.id
-        )
-
-        ##acao critica teste
-        acao3 = Acao(
-            descricao="Troca de lampada maquia 7 lado direito, urgente.",
-            status=StatusAcao.ABERTA,
-            impacto=Impacto.TOTAL,
-            data_criacao=date.today(),
-            data_prevista_conclusao=date.today() + timedelta(hours=12),
-            sistema_id=sistema2.id,
-            responsavel_id=user1.id
-        )
-
-
-        session.add(acao1)
-        session.add(acao2)
-        session.add(acao3)
-        session.commit()
 
         print("✅ Base de dados populada com sucesso!")
 

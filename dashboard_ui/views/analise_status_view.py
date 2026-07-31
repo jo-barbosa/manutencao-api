@@ -5,7 +5,6 @@ from dashboard_ui.components.cascade_selectors import render_cascade_selectors
 
 def render_analise_status_view():
     st.header("📊 Análise de Status & Equipamentos")
-    st.caption("Visão abrangente dos equipamentos fabris e consulta detalhada de intervenções.")
 
     tab_equipamentos, tab_analise_acoes = st.tabs([
         "🏭 Estado dos Equipamentos",

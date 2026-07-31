@@ -109,12 +109,3 @@ pip install -r requirements.txt
   python -m streamlit run dashboard.py
   ```
 
----
-
-## 🔑 Credenciais de Acesso (Dados de Teste)
-
-| Função | Email | Password |
-| :--- | :--- | :--- |
-| **Operador Principal** | `jorge.barbosa@inter.ikea.com` | `dummy` |
-| **Técnico de Manutenção** | `helder.vieira@inter.ikea.com` | `dummy` |
-| **Técnico de Manutenção** | `helio.machado1@inter.ikea.com` | `dummy` |

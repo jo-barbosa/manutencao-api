@@ -1,27 +1,28 @@
 import streamlit as st
-from dashboard_ui import api_client
+from dashboard_ui import api_client, layout
 
 user = st.session_state.get("user")
+layout.render_header()
 
-st.title("🏭 Visão Geral da Operação Fabril")
+st.title("🏭 Visão Geral dos Sistemas")
 
 if user:
     st.caption(f"Sessão ativa de: **{user.get('nome')}** (`{user.get('email')}`) | Utilize a barra lateral para navegar entre as secções da aplicação.")
 else:
-    st.caption("Visão geral em tempo real da fábrica. Inicie sessão na barra lateral para aceder a todas as funcionalidades de manutenção.")
+    st.caption("Visão geral em tempo real dos sistemas. Inicie sessão na barra lateral para aceder a todas as funcionalidades da aplicação.")
 
 # ==========================================
 # 1º SECÇÃO: PONTO DE SITUAÇÃO (PDS)
 # ==========================================
 if not user:
     # 🏢 SEM LOGIN: Exibe o PDS Geral da Fábrica
-    st.subheader("🏢 Ponto de Situação Executivo da Fábrica (PDS Geral)")
-    st.caption("Resumo inteligente do estado atual da produção e alertas operacionais.")
+    st.subheader("🏢 Ponto de Situação Geral dos sistemas da Fábrica")
+    st.caption("Resumo gerado por Inteligência Artificial com base nos dados desta aplicação. Clique no botão abaixo para gerar o PDS Geral.")
 
     col_btn1, col_btn2 = st.columns([1, 4])
     with col_btn1:
-        if st.button("🔄 Gerar PDS Geral (IA)", key="btn_pds_geral_home"):
-            with st.spinner("A consultar a IA..."):
+        if st.button("🔄 Gerar PDS Geral", key="btn_pds_geral_home"):
+            with st.spinner("A preparar o PDS Geral da fábrica..."):
                 texto = api_client.get_pds_geral()
                 if texto:
                     st.session_state["pds_geral_texto"] = texto
@@ -36,13 +37,13 @@ if not user:
 
 else:
     # 👤 COM LOGIN: Exibe o PDS Pessoal do Operador que logou
-    st.subheader(f"👤 Ponto de Situação do Turno — {user.get('nome')}")
-    st.caption("Briefing personalizado de tarefas e prioridades de manutenção para o teu turno.")
+    st.subheader(f"👤 Ponto de Situação — {user.get('nome')}")
+    st.caption("Briefing personalizado de tarefas e prioridades para ti, gerado por Inteligência Artificial com base nos dados desta aplicação. Clique no botão abaixo para gerar o teu briefing de turno.")
 
     col_btn1, col_btn2 = st.columns([1, 4])
     with col_btn1:
         if st.button(f"🔄 Gerar Briefing para {user.get('nome')}", key="btn_pds_op_home"):
-            with st.spinner("A preparar o teu briefing de turno..."):
+            with st.spinner("A preparar o teu briefing..."):
                 texto_op = api_client.get_pds_operador(user.get("id"))
                 if texto_op:
                     st.session_state["pds_operador_texto"] = texto_op
@@ -94,12 +95,10 @@ if sistemas:
     tabela_dados = []
     for item in sistemas:
         tabela_dados.append({
-            "ID": item["id"],
             "Equipamento / Sistema": item["nome_sistema"],
             "Estado Atual": cor_estado(item["estado"]),
             "Linha": item["linha"],
             "Fábrica": item["fabrica"],
-            "Fornecedor": item["fornecedor"]
         })
 
     st.dataframe(tabela_dados, use_container_width=True, hide_index=True)
