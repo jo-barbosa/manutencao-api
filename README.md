@@ -1,8 +1,8 @@
 # 🛠️ Consola de Manutenção Industrial (Microserviços, RabbitMQ & GraphQL Gateway)
 
-Sistema de gestão e acompanhamento de manutenção industrial para unidades fabris. A plataforma permite monitorizar o estado operacional de equipamentos (🟢 **OPERACIONAL**, 🟡 **DEGRADADO**, 🔴 **PARADO**), gerir intervenções técnicas e auditar alterações.
+Sistema de gestão e acompanhamento de manutenção industrial para unidades fabris. A plataforma permite monitorizar o estado operacional de equipamentos (🟢 **OPERACIONAL**, 🟡 **DEGRADADO**, 🔴 **PARADO**), gerir intervenções técnicas e auditar alterações através de uma interface intuitiva em Streamlit organizada por fábricas.
 
-A arquitetura do backend é baseada em **Microserviços Orientados a Eventos** com **Database-per-Service**, interligados por **RabbitMQ** e expostos através de um **GraphQL Gateway** unificado.
+A arquitetura do backend é baseada em **Microserviços Orientados a Eventos** com **Database-per-Service**, interligados por **RabbitMQ** (Pub/Sub), semeados por **Bootstrap Condicional Autónomo** e expostos através de um **GraphQL Gateway** unificado.
 
 ---
 
@@ -10,10 +10,11 @@ A arquitetura do backend é baseada em **Microserviços Orientados a Eventos** c
 
 - **Microserviços (FastAPI + Strawberry GraphQL):** Python 3.11+, [FastAPI](https://fastapi.tiangolo.com/), [Strawberry GraphQL](https://strawberry.rocks/) e [SQLModel](https://sqlmodel.tiangolo.com/).
 - **Broker de Mensagens (Event-Driven):** [RabbitMQ](https://www.rabbitmq.com/) (`pika` / `aio-pika`) com arquitetura Pub/Sub baseada em tópicos (`acao.criada`, `acao.atualizada`, `acao.fechada`).
-- **GraphQL Gateway:** Ponto único de entrada (`/graphql`) que agrega e roteia as consultas e mutações federadas para os respetivos microserviços.
-- **Frontend:** [Streamlit](https://streamlit.io/) com cliente GraphQL unificado ([dashboard_ui/api_client.py](file:///home/barjor/PycharmProjects/manutencao-api/dashboard_ui/api_client.py)).
-- **Bases de Dados (Database-per-Service):** Bases de dados autónomas para cada domínio (`auth.db`, `estrutura.db`, `manutencao.db`), prevenindo o acoplamento de dados.
-- **Orquestração & DX:** Docker, Docker Compose, `start.sh` e `Makefile`.
+- **Bootstrap de Dados Autónomo:** Cada microserviço verifica e popula automaticamente a sua própria base de dados no arranque apenas se esta se encontrar vazia (`bootstrap.py`).
+- **GraphQL Gateway:** Ponto único de entrada (`:8000/graphql`) que agrega e roteia as consultas e mutações federadas com verificação por expressões regulares e *word boundaries* (`\b`).
+- **Frontend (Streamlit):** Interface modular em [Streamlit](https://streamlit.io/) com cliente GraphQL unificado ([dashboard_ui/api_client.py](file:///home/barjor/PycharmProjects/manutencao-api/dashboard_ui/api_client.py)), contendo um painel em tempo real dividido em **3 colunas de fábricas** com cartões e semáforos unificados.
+- **Bases de Dados (Database-per-Service):** Persistência autónoma para cada domínio (`auth.db`, `estrutura.db`, `manutencao.db`), prevenindo acoplamento.
+- **Configuração & Orquestração:** Centralização via `.env` / `.env.example`, Docker, Docker Compose, `start.sh` e `Makefile`.
 
 ---
 
@@ -25,13 +26,15 @@ manutencao-api/
 ├── services/                      # 🧱 Microserviços Autónomos (Bounded Contexts)
 │   ├── auth_service/              # 🔐 Autenticação, Utilizadores & Tokens JWT
 │   │   ├── main.py                # Ponto de entrada FastAPI (:8001)
+│   │   ├── bootstrap.py           # Bootstrap de utilizadores iniciais
 │   │   ├── models.py              # Modelo de Superuser
 │   │   ├── database.py            # Base de dados isolada (auth.db)
 │   │   ├── schema.py              # Esquema Strawberry GraphQL (login, me, superusers)
-│   │   └── security.py            # Hashing Bcrypt e JWT
+│   │   └── security.py            # Hashing PBKDF2/Bcrypt e tokens JWT
 │   │
 │   ├── estrutura_service/         # 🏭 Fábricas, Linhas, Sistemas & Fornecedores
 │   │   ├── main.py                # Ponto de entrada FastAPI (:8002)
+│   │   ├── bootstrap.py           # Bootstrap da estrutura fabril inicial
 │   │   ├── models.py              # Modelos da estrutura fabril
 │   │   ├── database.py            # Base de dados isolada (estrutura.db)
 │   │   ├── schema.py              # Esquema Strawberry GraphQL
@@ -39,39 +42,44 @@ manutencao-api/
 │   │
 │   └── manutencao_service/        # 🛠️ Ações de Manutenção & Intervenções
 │       ├── main.py                # Ponto de entrada FastAPI (:8003)
+│       ├── bootstrap.py           # Bootstrap de ações de manutenção iniciais
 │       ├── models.py              # Modelo de Ação de Manutenção
 │       ├── database.py            # Base de dados isolada (manutencao.db)
 │       ├── schema.py              # Esquema Strawberry GraphQL
 │       └── event_publisher.py     # 📤 Publicador RabbitMQ (eventos de ações)
 │
 ├── gateway/                       # 🌐 GraphQL Gateway (Porta :8000/graphql)
-│   └── main.py                    # Roteamento e agregação das requisições GraphQL
+│   └── main.py                    # Roteamento e agregação inteligente de requisições GraphQL
 │
 ├── dashboard_ui/                  # 🎨 Package Frontend Modular em Streamlit
 │   ├── api_client.py              # Cliente GraphQL de comunicação com o Gateway
-│   └── views/                     # Visões e componentes da interface
+│   ├── layout.py                  # Cabeçalho e estrutura visual comum
+│   ├── components/                # Componentes reutilizáveis (ex.: seleção em cascata)
+│   └── views/                     # Visões (Análise, Estrutura, Gestão, Auditoria)
 ├── dashboard.py                   # Ponto de entrada da aplicação Streamlit (:8501)
 │
-├── docs/                          # 📚 Documentação Técnica & Arquitetura
-│   └── adr/                       # Registos de Decisões de Arquitetura (ADR 0001)
+├── docs-help/                     # 📚 Guias e Documentação Auxiliar
+│   ├── docker-deployment.md       # Guia de implantação offline (docker save / docker load)
+│   ├── endpoints-api.md           # Referência de esquemas GraphQL
+│   └── sql-help.md                # Referência de BD e consultas
 ├── CONTEXT.md                     # Linguagem Ubíqua & Bounded Contexts
 │
+├── .env                           # Variáveis de ambiente locais
+├── .env.example                   # Template de variáveis de ambiente
 ├── docker-compose.yml             # Orquestração (RabbitMQ + 3 Microserviços + Gateway + Dashboard)
 ├── Dockerfile                     # Containerização genérica dos microserviços Python
-├── start.sh                       # Script bash para arranque rápido no terminal
+├── start.sh                       # Script bash de arranque automático
 ├── Makefile                       # Atalhos de terminal (make start, make stop, make logs)
-└── requirements.txt               # Dependências do projeto (incluindo Strawberry GraphQL & pika)
+└── requirements.txt               # Dependências do projeto
 ```
 
 ---
 
-## 📐 Avaliação da Organização da Arquitetura
-
-A estrutura de pastas encontra-se organizada de acordo com os princípios de **Clean Architecture** e **Domain-Driven Design (DDD)**:
+## 📐 Princípios de Arquitetura (DDD & Clean Architecture)
 
 1. **Separação por Bounded Contexts (`services/`):** Cada microserviço reside no seu próprio diretório com modelos de dados, base de dados, esquemas GraphQL e lógica de negócio 100% isolados.
-2. **Desacoplamento por Eventos (RabbitMQ):** O `manutencao_service` apenas envia mensagens sobre ações de manutenção. O `estrutura_service` consome as mensagens em background através do `event_consumer.py`, mantendo a consistência eventual sem chamadas síncronas entre bases de dados.
-3. **Ponto Único de Comunicação (`gateway/`):** O frontend comunica exclusivamente com o GraphQL Gateway (`/graphql`), abstraindo a topologia de portas dos microserviços.
+2. **Desacoplamento por Eventos (RabbitMQ):** O `manutencao_service` apenas publica eventos (`acao.criada`, `acao.atualizada`, `acao.fechada`). O `estrutura_service` consome as mensagens em background através do `event_consumer.py`, mantendo a consistência eventual sem acoplamento entre bases de dados.
+3. **Ponto Único de Comunicação (`gateway/`):** O frontend comunica exclusivamente com o GraphQL Gateway (`/graphql`), abstraindo a topologia interna.
 4. **Isolamento de Persistência (*Database-per-Service*):** Garante que nenhum microserviço lê ou escreve diretamente na base de dados de outro microserviço.
 
 ---
@@ -86,9 +94,11 @@ Na raiz do projeto, execute o script `./start.sh`:
 ./start.sh
 ```
 
-### Método 2: Via Makefile
+### Método 2: Via Docker Compose / Makefile
 
 ```bash
+docker compose up -d
+# ou
 make start
 ```
 
@@ -102,8 +112,6 @@ make stop   # Parar todos os containers
 
 ## 🌐 Endpoints e Portas do Sistema
 
-Após o arranque, os seguintes serviços estarão disponíveis:
-
 | Serviço | URL / Endpoint | Descrição |
 | :--- | :--- | :--- |
 | 📊 **Dashboard Frontend** | `http://localhost:8501` | Interface de utilizador Streamlit |
@@ -112,4 +120,3 @@ Após o arranque, os seguintes serviços estarão disponíveis:
 | 🔐 **Auth-Service** | `http://localhost:8001/graphql` | Microserviço de Autenticação |
 | 🏭 **Estrutura-Service** | `http://localhost:8002/graphql` | Microserviço de Estrutura Fabril |
 | 🛠️ **Manutenção-Service** | `http://localhost:8003/graphql` | Microserviço de Ações de Manutenção |
-

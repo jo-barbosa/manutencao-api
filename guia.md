@@ -1,12 +1,12 @@
 # 🛠️ Guia de Arquitetura & Execução - Sistema de Manutenção Fabril
 
-Este documento descreve a estrutura completa da aplicação modular desenvolvida em **Python (FastAPI + SQLModel + Streamlit)**.
+Este documento descreve a estrutura completa, componentes e procedimentos de execução da aplicação de manutenção fabril desenvolvida em **Python (FastAPI + Strawberry GraphQL + RabbitMQ + Streamlit)**.
 
 ---
 
-## 1. Dependências do Projeto (`requirements.txt`)
+## 1. Instalação e Dependências (`requirements.txt`)
 
-Instale todas as dependências do backend e frontend com:
+Instale todas as dependências da aplicação com:
 
 ```bash
 pip install -r requirements.txt
@@ -14,62 +14,96 @@ pip install -r requirements.txt
 
 ---
 
-## 2. Estrutura Modular do Projeto
+## 2. Estrutura Modular do Projeto (Microserviços & Event-Driven)
 
 ```text
 manutencao-api/
 │
-├── app/                        # 🔌 API Backend (FastAPI)
-│   ├── __init__.py
-│   ├── main.py                 # Ponto de entrada da API REST
-│   ├── database.py             # Configuração da BD SQLite (database.db)
-│   ├── models.py               # Modelos de Dados (SQLModel)
-│   ├── security.py             # Encriptação Bcrypt & Tokens JWT
-│   ├── seed.py                 # Povoamento inicial de dados
-│   ├── routers/
-│   │   ├── acoes.py            # Endpoints de Ações (Criar, Editar, Fechar)
-│   │   ├── auth.py             # Login, Perfil e Reset de Password
-│   │   ├── superusers.py       # Listagem de Operadores/Superutilizadores
-│   │   ├── estrutura.py        # Fábricas, Linhas, Sistemas e Fornecedores
-│   │   ├── auditoria.py        # Histórico de Registos de Auditoria
-│   │   └── pds.py              # Ponto de Situação por IA (OpenRouter)
-│   └── services/
-│       └── ai_service.py       # Integração com modelos LLM via OpenRouter
+├── services/                      # 🧱 Microserviços Autónomos (Bounded Contexts)
+│   ├── auth_service/              # 🔐 Autenticação & Gestão de Tokens JWT (:8001)
+│   │   ├── main.py                # Ponto de entrada FastAPI & lifecycle hooks
+│   │   ├── bootstrap.py           # População inicial condicional (auth.db)
+│   │   ├── models.py              # Modelo de dados Superuser
+│   │   ├── database.py            # Configuração e engine da BD
+│   │   ├── schema.py              # Esquema Strawberry GraphQL
+│   │   └── security.py            # Hashing PBKDF2/Bcrypt & Tokens JWT
+│   │
+│   ├── estrutura_service/         # 🏭 Fábricas, Linhas, Sistemas & Fornecedores (:8002)
+│   │   ├── main.py                # Ponto de entrada FastAPI
+│   │   ├── bootstrap.py           # População inicial da estrutura fabril (estrutura.db)
+│   │   ├── models.py              # Modelos Fabrica, Linha, Sistema, Fornecedor
+│   │   ├── database.py            # Configuração e engine da BD
+│   │   ├── schema.py              # Esquema Strawberry GraphQL
+│   │   └── event_consumer.py      # Consumidor RabbitMQ (recálculo de estado do sistema)
+│   │
+│   └── manutencao_service/        # 🛠️ Gestão de Intervenções e Ações de Manutenção (:8003)
+│       ├── main.py                # Ponto de entrada FastAPI
+│       ├── bootstrap.py           # População inicial de ações de teste (manutencao.db)
+│       ├── models.py              # Modelo de dados Acao
+│       ├── database.py            # Configuração e engine da BD
+│       ├── schema.py              # Esquema Strawberry GraphQL
+│       └── event_publisher.py     # Publicador de eventos RabbitMQ (Pub/Sub)
 │
-├── dashboard_ui/               # 🎨 Frontend Modular (Streamlit)
-│   ├── __init__.py
-│   ├── api_client.py           # Cliente HTTP centralizado com envio de JWT
+├── gateway/                       # 🌐 Federated GraphQL Gateway (:8000/graphql)
+│   └── main.py                    # Roteamento inteligente de consultas e mutações
+│
+├── dashboard_ui/                  # 🎨 Frontend Modular (Streamlit)
+│   ├── api_client.py              # Cliente GraphQL unificado
+│   ├── layout.py                  # Componente de cabeçalho comum
 │   ├── components/
-│   │   └── cascade_selectors.py # Componente de seleção em cascata (Fábrica -> Linha -> Sistema)
+│   │   └── cascade_selectors.py   # Seletor em cascata (Fábrica -> Linha -> Sistema)
 │   └── views/
-│       ├── pds_view.py          # 🤖 Ponto de Situação com IA
-│       ├── registar_acao_view.py # ➕ Form de Registo de Ações
-│       ├── gestao_acoes_view.py  # 🔄 Gestão, Edição e Encerramento de Ações
-│       ├── analise_status_view.py# 📊 Tabela de Equipamentos e Consulta de Ações
-│       ├── estrutura_view.py     # ⚙️ Adicionar Sistemas, Fornecedores e Fábricas
-│       └── auditoria_view.py     # 📜 Linha do Tempo e Histórico de Logs
+│       ├── registar_page.py       # ➕ Registo de Ações de Manutenção
+│       ├── gestao_page.py         # 🔄 Edição e Encerramento de Ações
+│       ├── analise_page.py        # 📊 Análise e Consulta de Equipamentos
+│       ├── estrutura_page.py      # ⚙️ Gestão de Sistemas e Fornecedores
+│       └── auditoria_page.py      # 📜 Linha do Tempo e Histórico de Logs
 │
-├── dashboard.py                # Ponto de entrada da UI Streamlit
-├── requirements.txt
-└── docs-help/                  # Documentação e Guias
-    ├── endpoints-api.md        # Documentação completa de todas as rotas da API
-    └── sql-help.md             # Cheat Sheet de operações SQL & SQLite
+├── dashboard.py                   # Ponto de entrada da UI Streamlit (:8501)
+├── .env                           # Variáveis de ambiente locais
+├── .env.example                   # Template de variáveis de ambiente
+├── docker-compose.yml             # Orquestração (RabbitMQ + Microserviços + Gateway + UI)
+├── Dockerfile                     # Imagem Docker multi-stage dos serviços Python
+├── start.sh                       # Script de execução rápida
+├── Makefile                       # Atalhos de comandos
+└── docs-help/                     # Documentação Auxiliar
+    ├── docker-deployment.md       # Guia de implantação offline (docker save / docker load)
+    ├── endpoints-api.md           # Referência de esquemas GraphQL
+    └── sql-help.md                # Cheat Sheet de operações SQL & SQLite
 ```
 
 ---
 
 ## 3. Como Executar a Aplicação
 
-### Passo 1: Iniciar o Backend (FastAPI)
+### Opção 1: Via Script Automático (Recomendado)
 Num terminal na pasta `manutencao-api`:
 ```bash
-python -m uvicorn app.main:app --reload --port 8000
+./start.sh
 ```
-- **Documentação Swagger Interativa:** `http://localhost:8000/docs`
 
-### Passo 2: Iniciar o Frontend Modular (Streamlit)
-Noutro terminal na pasta `manutencao-api`:
+### Opção 2: Via Docker Compose
 ```bash
-streamlit run dashboard.py
+docker compose up -d
 ```
-- **Painel Interativo:** `http://localhost:8501`
+
+### Opção 3: Via Makefile
+```bash
+make start      # Iniciar todos os containers
+make logs       # Acompanhar logs em tempo real
+make stop       # Parar todos os containers
+```
+
+---
+
+## 4. Bootstrap Condicional de Dados
+Cada microserviço executa autonomamente o seu script `bootstrap.py` durante o arranque (`startup`). Caso a respetiva base de dados esteja vazia, os registos iniciais são inseridos automaticamente:
+
+- **Auth-Service (`auth.db`):** Cria os utilizadores iniciais (`admin@empresa.com` / `admin123`, `joao.silva@empresa.com` / `senha123`, etc.).
+- **Estrutura-Service (`estrutura.db`):** Cria as fábricas (*PIGMENT*, *NORDIC*, *PACOS_1*), linhas de produção, fornecedores e equipamentos.
+- **Manutenção-Service (`manutencao.db`):** Cria o histórico inicial de ações de manutenção.
+
+---
+
+## 5. Guias Complementares de Implantação
+Para instruções detalhadas de exportação e implantação offline em servidores de produção sem acesso direto a registos públicos, consulte o guia em **[docs-help/docker-deployment.md](file:///home/barjor/PycharmProjects/manutencao-api/docs-help/docker-deployment.md)**.
