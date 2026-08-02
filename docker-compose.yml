@@ -1,59 +1,81 @@
 version: '3.8'
 
 services:
-  # 1. Base de Dados PostgreSQL (Produção)
-  postgres-db:
-    image: postgres:16-alpine
-    container_name: manutencao-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: fabrica_password_2026
-      POSTGRES_DB: maintenancedb
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: manutencao-rabbitmq
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata_manutencao:/var/lib/postgresql/data
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
-      timeout: 5s
+      timeout: 10s
       retries: 5
 
-  # 2. Backend API (FastAPI)
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: manutencao-api-backend
-    restart: always
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  auth-service:
+    build: .
+    container_name: auth-service
+    command: uvicorn services.auth_service.main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    environment:
+      - AUTH_DATABASE_URL=sqlite:///./auth.db
+    volumes:
+      - .:/app
+
+  estrutura-service:
+    build: .
+    container_name: estrutura-service
+    command: uvicorn services.estrutura_service.main:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+    environment:
+      - ESTRUTURA_DATABASE_URL=sqlite:///./estrutura.db
+      - RABBITMQ_HOST=rabbitmq
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  manutencao-service:
+    build: .
+    container_name: manutencao-service
+    command: uvicorn services.manutencao_service.main:app --host 0.0.0.0 --port 8003 --reload
+    ports:
+      - "8003:8003"
+    environment:
+      - MANUTENCAO_DATABASE_URL=sqlite:///./manutencao.db
+      - RABBITMQ_HOST=rabbitmq
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  graphql-gateway:
+    build: .
+    container_name: graphql-gateway
+    command: uvicorn gateway.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:fabrica_password_2026@postgres-db:5432/maintenancedb
-      - JWT_SECRET=8f3c2a9d1e4b7a6c5d8e2f1a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
-      - MASTER_RESET_KEY=fabrica_master_secret_2026
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - AUTH_SERVICE_URL=http://auth-service:8001/graphql
+      - ESTRUTURA_SERVICE_URL=http://estrutura-service:8002/graphql
+      - MANUTENCAO_SERVICE_URL=http://manutencao-service:8003/graphql
     depends_on:
-      postgres-db:
-        condition: service_healthy
+      - auth-service
+      - estrutura-service
+      - manutencao-service
 
-  # 3. Frontend Dashboard (Streamlit)
-  dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: manutencao-streamlit-dashboard
-    restart: always
-    command: streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0
+  dashboard-ui:
+    build: .
+    container_name: dashboard-ui
+    command: streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
     ports:
       - "8501:8501"
     environment:
-      - API_URL=http://api:8000/api
+      - GRAPHQL_URL=http://graphql-gateway:8000/graphql
     depends_on:
-      - api
-
-volumes:
-  pgdata_manutencao:
-    driver: local
+      - graphql-gateway
