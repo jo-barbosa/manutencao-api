@@ -17,7 +17,6 @@ if "user" not in st.session_state:
 
 # Definir Páginas com st.Page
 home_page = st.Page("dashboard_ui/home.py", title="Dashboard", icon="🏭", default=True)
-pds_page = st.Page("dashboard_ui/views/pds_page.py", title="Ponto de Situação (IA)", icon="🤖")
 reg_page = st.Page("dashboard_ui/views/registar_page.py", title="Registar Ação", icon="➕")
 gestao_page = st.Page("dashboard_ui/views/gestao_page.py", title="Gestão de Ações", icon="🔄")
 analise_page = st.Page("dashboard_ui/views/analise_page.py", title="Análise & Status", icon="📊")
@@ -33,7 +32,7 @@ if is_logged_in:
     # QUANDO LOGADO: Mostra todas as opções organizadas com a palavra "Dashboard" idêntica às restantes!
     pages_map = {
         "Navegação": [home_page],
-        "Operação Fabril": [pds_page, reg_page, gestao_page],
+        "Operação Fabril": [reg_page, gestao_page],
         "Gestão & Consulta": [analise_page, est_page, audit_page]
     }
 else:
@@ -49,19 +48,19 @@ st.sidebar.divider()
 if not is_logged_in:
     st.sidebar.title("🔑 Iniciar Sessão")
     with st.sidebar.form("sidebar_login_form"):
-        email = st.text_input("Email", value="jorge.barbosa@inter.ikea.com")
-        password = st.text_input("Password", type="password", value="dummy")
+        email = st.text_input("Email", value="admin@empresa.com")
+        password = st.text_input("Password", type="password", value="admin123")
         submeter_login = st.form_submit_button("Entrar", use_container_width=True)
 
         if submeter_login:
             try:
                 data = api_client.login(email.strip(), password.strip())
-                st.session_state.token = data["accessToken"]
+                st.session_state.token = data["access_token"]
                 st.session_state.user = data["user"]
                 st.success(f"Bem-vindo, {data['user']['nome']}!")
                 st.rerun()
             except Exception as e:
-                st.error(f"Credenciais inválidas: {e}")
+                st.error(f"Credenciais inválidas ou erro no login: {e}")
 else:
     st.sidebar.title(f"👤 {user.get('nome', 'Operador')}")
     st.sidebar.caption(f"📧 {user.get('email', '')}")
@@ -71,9 +70,6 @@ else:
         st.session_state.user = None
         st.session_state.pop("pds_operador_texto", None)
         st.rerun()
-
-st.sidebar.divider()
-st.sidebar.info("🔌 Conectado ao Backend FastAPI (`manutencao-api`)")
 
 # 3. Executar a Página Selecionada
 pg.run()

@@ -1,12 +1,13 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: manutencao-rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -16,23 +17,24 @@ services:
   auth-service:
     build: .
     container_name: auth-service
-    command: uvicorn services.auth_service.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn services.auth_service.main:app --host 0.0.0.0 --port ${AUTH_PORT:-8001} --reload
     ports:
-      - "8001:8001"
+      - "${AUTH_PORT:-8001}:${AUTH_PORT:-8001}"
     environment:
-      - AUTH_DATABASE_URL=sqlite:///./auth.db
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite:///./auth.db}
+      - SECRET_KEY=${SECRET_KEY:-SUPER_SECRET_KEY_DEV_123}
     volumes:
       - .:/app
 
   estrutura-service:
     build: .
     container_name: estrutura-service
-    command: uvicorn services.estrutura_service.main:app --host 0.0.0.0 --port 8002 --reload
+    command: uvicorn services.estrutura_service.main:app --host 0.0.0.0 --port ${ESTRUTURA_PORT:-8002} --reload
     ports:
-      - "8002:8002"
+      - "${ESTRUTURA_PORT:-8002}:${ESTRUTURA_PORT:-8002}"
     environment:
-      - ESTRUTURA_DATABASE_URL=sqlite:///./estrutura.db
-      - RABBITMQ_HOST=rabbitmq
+      - ESTRUTURA_DATABASE_URL=${ESTRUTURA_DATABASE_URL:-sqlite:///./estrutura.db}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     volumes:
       - .:/app
     depends_on:
@@ -42,12 +44,12 @@ services:
   manutencao-service:
     build: .
     container_name: manutencao-service
-    command: uvicorn services.manutencao_service.main:app --host 0.0.0.0 --port 8003 --reload
+    command: uvicorn services.manutencao_service.main:app --host 0.0.0.0 --port ${MANUTENCAO_PORT:-8003} --reload
     ports:
-      - "8003:8003"
+      - "${MANUTENCAO_PORT:-8003}:${MANUTENCAO_PORT:-8003}"
     environment:
-      - MANUTENCAO_DATABASE_URL=sqlite:///./manutencao.db
-      - RABBITMQ_HOST=rabbitmq
+      - MANUTENCAO_DATABASE_URL=${MANUTENCAO_DATABASE_URL:-sqlite:///./manutencao.db}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     volumes:
       - .:/app
     depends_on:
@@ -57,13 +59,15 @@ services:
   graphql-gateway:
     build: .
     container_name: graphql-gateway
-    command: uvicorn gateway.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn gateway.main:app --host 0.0.0.0 --port ${GATEWAY_PORT:-8000} --reload
     ports:
-      - "8000:8000"
+      - "${GATEWAY_PORT:-8000}:${GATEWAY_PORT:-8000}"
     environment:
-      - AUTH_SERVICE_URL=http://auth-service:8001/graphql
-      - ESTRUTURA_SERVICE_URL=http://estrutura-service:8002/graphql
-      - MANUTENCAO_SERVICE_URL=http://manutencao-service:8003/graphql
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:8001/graphql}
+      - ESTRUTURA_SERVICE_URL=${ESTRUTURA_SERVICE_URL:-http://estrutura-service:8002/graphql}
+      - MANUTENCAO_SERVICE_URL=${MANUTENCAO_SERVICE_URL:-http://manutencao-service:8003/graphql}
+    volumes:
+      - .:/app
     depends_on:
       - auth-service
       - estrutura-service
@@ -72,10 +76,12 @@ services:
   dashboard-ui:
     build: .
     container_name: dashboard-ui
-    command: streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
+    command: streamlit run dashboard.py --server.port ${STREAMLIT_PORT:-8501} --server.address 0.0.0.0
     ports:
-      - "8501:8501"
+      - "${STREAMLIT_PORT:-8501}:${STREAMLIT_PORT:-8501}"
     environment:
-      - GRAPHQL_URL=http://graphql-gateway:8000/graphql
+      - GRAPHQL_URL=${GRAPHQL_URL:-http://graphql-gateway:8000/graphql}
+    volumes:
+      - .:/app
     depends_on:
       - graphql-gateway

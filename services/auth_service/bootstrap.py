@@ -14,6 +14,11 @@ def bootstrap_auth_data():
         print("🌱 [Auth-Service Bootstrap] A popular utilizadores iniciais...")
         users = [
             Superuser(
+                nome="Administrador Principal",
+                email="admin@empresa.com",
+                password_hash=get_password_hash("admin123")
+            ),
+            Superuser(
                 nome="Jorge Barbosa",
                 email="jorge.barbosa@inter.ikea.com",
                 password_hash=get_password_hash("dummy")

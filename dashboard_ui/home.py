@@ -12,54 +12,7 @@ else:
     st.caption("Visão geral em tempo real dos sistemas. Inicie sessão na barra lateral para aceder a todas as funcionalidades da aplicação.")
 
 # ==========================================
-# 1º SECÇÃO: PONTO DE SITUAÇÃO (PDS)
-# ==========================================
-if not user:
-    # 🏢 SEM LOGIN: Exibe o PDS Geral da Fábrica
-    st.subheader("🏢 Ponto de Situação Geral dos sistemas da Fábrica")
-    st.caption("Resumo gerado por Inteligência Artificial com base nos dados desta aplicação. Clique no botão abaixo para gerar o PDS Geral.")
-
-    col_btn1, col_btn2 = st.columns([1, 4])
-    with col_btn1:
-        if st.button("🔄 Gerar PDS Geral", key="btn_pds_geral_home"):
-            with st.spinner("A preparar o PDS Geral da fábrica..."):
-                texto = api_client.get_pds_geral()
-                if texto:
-                    st.session_state["pds_geral_texto"] = texto
-                else:
-                    st.error("Não foi possível gerar o PDS Geral.")
-
-    if "pds_geral_texto" in st.session_state:
-        with st.container(border=True):
-            st.markdown(st.session_state["pds_geral_texto"])
-    else:
-        st.info("Clique no botão acima para carregar o resumo inteligente da operação da fábrica.")
-
-else:
-    # 👤 COM LOGIN: Exibe o PDS Pessoal do Operador que logou
-    st.subheader(f"👤 Ponto de Situação — {user.get('nome')}")
-    st.caption("Briefing personalizado de tarefas e prioridades para ti, gerado por Inteligência Artificial com base nos dados desta aplicação. Clique no botão abaixo para gerar o teu briefing de turno.")
-
-    col_btn1, col_btn2 = st.columns([1, 4])
-    with col_btn1:
-        if st.button(f"🔄 Gerar Briefing para {user.get('nome')}", key="btn_pds_op_home"):
-            with st.spinner("A preparar o teu briefing..."):
-                texto_op = api_client.get_pds_operador(user.get("id"))
-                if texto_op:
-                    st.session_state["pds_operador_texto"] = texto_op
-                else:
-                    st.error("Erro ao gerar briefing de operador.")
-
-    if "pds_operador_texto" in st.session_state:
-        with st.container(border=True):
-            st.markdown(st.session_state["pds_operador_texto"])
-    else:
-        st.info(f"Clique no botão acima para gerar o teu briefing personalizado de turno, {user.get('nome')}.")
-
-st.markdown("---")
-
-# ==========================================
-# 2º SECÇÃO: SEMÁFOROS / MÉTRICAS DOS EQUIPAMENTOS
+# 1º SECÇÃO: MÉTRICAS GERAIS DOS EQUIPAMENTOS
 # ==========================================
 sistemas = api_client.get_sistemas_status()
 acoes = api_client.get_acoes()
@@ -80,27 +33,86 @@ col5.metric("🛠️ Ações Abertas", acoes_abertas)
 st.markdown("---")
 
 # ==========================================
-# 3º SECÇÃO: LISTA DOS EQUIPAMENTOS EM TEMPO REAL
+# 2º SECÇÃO: ESTADO DOS EQUIPAMENTOS EM TEMPO REAL (3 COLUNAS - 1 POR FÁBRICA)
 # ==========================================
 st.subheader("🏭 Estado dos Equipamentos em Tempo Real")
 
-if sistemas:
-    def cor_estado(estado):
-        if estado == "PARADO":
-            return "🔴 PARADO"
-        elif estado == "DEGRADADO":
-            return "🟡 DEGRADADO"
-        return "🟢 OPERACIONAL"
-
-    tabela_dados = []
-    for item in sistemas:
-        tabela_dados.append({
-            "Equipamento / Sistema": item["nome_sistema"],
-            "Estado Atual": cor_estado(item["estado"]),
-            "Linha": item["linha"],
-            "Fábrica": item["fabrica"],
-        })
-
-    st.dataframe(tabela_dados, use_container_width=True, hide_index=True)
+fabricas_raw = api_client.get_fabricas()
+# Obter até 3 fábricas para as 3 colunas
+if fabricas_raw:
+    fabricas_nomes = [f["nome"] for f in fabricas_raw[:3]]
 else:
-    st.info("Nenhum sistema registado na base de dados.")
+    # Fallback para fábricas existentes nos sistemas registados
+    fabricas_nomes = list(dict.fromkeys([s["fabrica"] for s in sistemas if s.get("fabrica")]))[:3]
+
+# Garantir exatamente 3 colunas (1 por fábrica)
+cols_fabrica = st.columns(3)
+
+def render_status_badge(estado: str) -> str:
+    """Gera o HTML do quadrado semáforo à direita da mini-tabela."""
+    if estado == "PARADO":
+        bg_color = "#DC2626"
+        icon = "🔴"
+        label = "PARADO"
+    elif estado == "DEGRADADO":
+        bg_color = "#D97706"
+        icon = "🟡"
+        label = "DEGRADADO"
+    else:
+        bg_color = "#059669"
+        icon = "🟢"
+        label = "OPERACIONAL"
+
+    return f"""
+    <div style="
+        background-color: {bg_color};
+        color: white;
+        border-radius: 8px;
+        height: 100%;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 11px;
+        text-align: center;
+        padding: 4px;
+        margin: auto;
+    ">
+        <span style="font-size: 20px; line-height: 1.2;">{icon}</span>
+        <span style="letter-spacing: 0.5px;">{label}</span>
+    </div>
+    """
+
+# Agrupar sistemas por fábrica
+sistemas_por_fabrica = {}
+for item in sistemas:
+    fab = item.get("fabrica", "Outras")
+    if fab not in sistemas_por_fabrica:
+        sistemas_por_fabrica[fab] = []
+    sistemas_por_fabrica[fab].append(item)
+
+# Preencher cada uma das 3 colunas de fábrica
+for idx in range(3):
+    with cols_fabrica[idx]:
+        if idx < len(fabricas_nomes):
+            nome_fabrica = fabricas_nomes[idx]
+            st.markdown(f"### 🏢 {nome_fabrica}")
+
+            sistemas_fab = sistemas_por_fabrica.get(nome_fabrica, [])
+            if sistemas_fab:
+                for sys in sistemas_fab:
+                    with st.container(border=True):
+                        c_info, c_badge = st.columns([3, 1.2])
+                        with c_info:
+                            st.markdown(f"**⚙️ {sys['nome_sistema']}**")
+                            st.markdown(f"<small>📍 **Linha:** {sys['linha']}</small>", unsafe_allow_html=True)
+                            st.markdown(f"<small>🔧 **Fornecedor:** {sys['fornecedor']}</small>", unsafe_allow_html=True)
+                        with c_badge:
+                            st.markdown(render_status_badge(sys["estado"]), unsafe_allow_html=True)
+            else:
+                st.caption("Nenhum equipamento registado nesta fábrica.")
+        else:
+            st.markdown("### 🏢 (Sem Fábrica)")
+            st.caption("Sem dados.")
