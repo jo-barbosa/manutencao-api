@@ -1,6 +1,5 @@
 import os
 import json
-import asyncio
 import threading
 import time
 import pika
@@ -34,10 +33,15 @@ def callback(ch, method, properties, body):
         if sistema_id:
             recalcular_estado_sistema_do_evento(sistema_id, novo_estado)
     except Exception as e:
-        print(f"❌ Error processing RabbitMQ message: {e}")
+        print(f"❌ Erro ao processar mensagem RabbitMQ: {e}")
 
 def start_rabbitmq_consumer():
-    while True:
+    """Tenta conectar ao RabbitMQ até um número máximo de vezes (MAX_RETRIES). Se falhar, para de tentar."""
+    max_retries = int(os.getenv("RABBITMQ_MAX_RETRIES", "5"))
+    retry_count = 0
+    retry_interval = 3  # segundos entre tentativas
+
+    while retry_count < max_retries:
         try:
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600, blocked_connection_timeout=300)
@@ -50,11 +54,17 @@ def start_rabbitmq_consumer():
                 channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=routing_key)
 
             channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback, auto_ack=True)
-            print(f"🐰 [RabbitMQ Consumer] A aguardar eventos em {RABBITMQ_HOST}...")
+            print(f"🐰 [RabbitMQ Consumer] Conectado e a aguardar eventos em '{RABBITMQ_HOST}'...")
+            retry_count = 0  # Reseta o contador se a conexão for bem-sucedida
             channel.start_consuming()
         except Exception as e:
-            print(f"⚠️ [RabbitMQ Consumer] Conexão falhou ({e}), tentando novamente em 5s...")
-            time.sleep(5)
+            retry_count += 1
+            print(f"⚠️ [RabbitMQ Consumer] Conexão a '{RABBITMQ_HOST}' falhou ({retry_count}/{max_retries}): {e}")
+            if retry_count < max_retries:
+                time.sleep(retry_interval)
+            else:
+                print(f"🛑 [RabbitMQ Consumer] Atingido o limite máximo de {max_retries} tentativas. Modo offline ativado (RabbitMQ desativado).")
+                break
 
 def run_consumer_in_background():
     thread = threading.Thread(target=start_rabbitmq_consumer, daemon=True)
