@@ -20,7 +20,7 @@ def calcular_estado_sistema(sistema_id: int) -> str:
             return "DEGRADADO"
         return "OPERACIONAL"
 
-def publicar_evento_manutencao(routing_key: str, acao: Acao):
+def publicar_evento_manutencao(routing_key: str, acao: Acao, utilizador_email: str = "operador@inter.ikea.com"):
     """Publica um evento em RabbitMQ sobre a alteração de uma Ação de Manutenção."""
     try:
         connection = pika.BlockingConnection(
@@ -38,7 +38,9 @@ def publicar_evento_manutencao(routing_key: str, acao: Acao):
             "impacto": acao.impacto.value if hasattr(acao.impacto, 'value') else str(acao.impacto),
             "sistema_id": acao.sistema_id,
             "responsavel_id": acao.responsavel_id,
-            "estado_calculado": estado_calculado
+            "estado_calculado": estado_calculado,
+            "utilizador_email": utilizador_email,
+            "comentario_fecho": acao.comentario_fecho
         }
 
         channel.basic_publish(

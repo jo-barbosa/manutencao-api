@@ -19,11 +19,15 @@ class DummyResponse:
         return self._json_data
 
 def get_headers() -> Dict[str, str]:
-    """Retorna o cabeçalho HTTP com o Token JWT de autorização."""
+    """Retorna o cabeçalho HTTP com o Token JWT de autorização e identificação do utilizador."""
+    headers = {}
     token = st.session_state.get("token")
     if token:
-        return {"Authorization": f"Bearer {token}"}
-    return {}
+        headers["Authorization"] = f"Bearer {token}"
+    user = st.session_state.get("user")
+    if isinstance(user, dict) and user.get("email"):
+        headers["X-User-Email"] = user.get("email")
+    return headers
 
 def execute_graphql(query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executa uma query/mutação GraphQL no GraphQL Gateway."""
@@ -354,4 +358,29 @@ def get_pds_operador(superuser_id: int) -> Optional[str]:
     return f"💡 PDS Operador #{superuser_id}: Foco em manutenções preventivas abertas."
 
 def get_auditoria() -> List[Dict[str, Any]]:
-    return []
+    query = """
+    query {
+        auditoria {
+            id
+            utilizadorEmail
+            acaoRealizada
+            detalhes
+            timestamp
+        }
+    }
+    """
+    try:
+        data = execute_graphql(query)
+        res = []
+        for a in data.get("auditoria", []):
+            res.append({
+                "id": a["id"],
+                "utilizador_email": a["utilizadorEmail"],
+                "acao_realizada": a["acaoRealizada"],
+                "detalhes": a["detalhes"],
+                "timestamp": a.get("timestamp")
+            })
+        return res
+    except Exception as e:
+        print(f"Erro ao obter registos de auditoria: {e}")
+        return []

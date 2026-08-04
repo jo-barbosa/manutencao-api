@@ -21,7 +21,7 @@ services:
     ports:
       - "${AUTH_PORT:-8001}:${AUTH_PORT:-8001}"
     environment:
-      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite:///./auth.db}
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite:///./data/auth.db}
       - SECRET_KEY=${SECRET_KEY:-SUPER_SECRET_KEY_DEV_123}
     volumes:
       - .:/app
@@ -33,7 +33,7 @@ services:
     ports:
       - "${ESTRUTURA_PORT:-8002}:${ESTRUTURA_PORT:-8002}"
     environment:
-      - ESTRUTURA_DATABASE_URL=${ESTRUTURA_DATABASE_URL:-sqlite:///./estrutura.db}
+      - ESTRUTURA_DATABASE_URL=${ESTRUTURA_DATABASE_URL:-sqlite:///./data/estrutura.db}
       - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     volumes:
       - .:/app
@@ -48,7 +48,22 @@ services:
     ports:
       - "${MANUTENCAO_PORT:-8003}:${MANUTENCAO_PORT:-8003}"
     environment:
-      - MANUTENCAO_DATABASE_URL=${MANUTENCAO_DATABASE_URL:-sqlite:///./manutencao.db}
+      - MANUTENCAO_DATABASE_URL=${MANUTENCAO_DATABASE_URL:-sqlite:///./data/manutencao.db}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  auditoria-service:
+    build: .
+    container_name: auditoria-service
+    command: uvicorn services.auditoria_service.main:app --host 0.0.0.0 --port ${AUDITORIA_PORT:-8004} --reload
+    ports:
+      - "${AUDITORIA_PORT:-8004}:${AUDITORIA_PORT:-8004}"
+    environment:
+      - AUDITORIA_DATABASE_URL=${AUDITORIA_DATABASE_URL:-sqlite:///./data/auditoria.db}
       - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
     volumes:
       - .:/app
@@ -66,12 +81,14 @@ services:
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:8001/graphql}
       - ESTRUTURA_SERVICE_URL=${ESTRUTURA_SERVICE_URL:-http://estrutura-service:8002/graphql}
       - MANUTENCAO_SERVICE_URL=${MANUTENCAO_SERVICE_URL:-http://manutencao-service:8003/graphql}
+      - AUDITORIA_SERVICE_URL=${AUDITORIA_SERVICE_URL:-http://auditoria-service:8004/graphql}
     volumes:
       - .:/app
     depends_on:
       - auth-service
       - estrutura-service
       - manutencao-service
+      - auditoria-service
 
   dashboard-ui:
     build: .

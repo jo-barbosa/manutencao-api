@@ -2,7 +2,7 @@ import streamlit as st
 from dashboard_ui import api_client
 
 st.set_page_config(
-    page_title="Consola de Manutenção Fabril",
+    page_title="Consola de Manutenção",
     page_icon="🛠️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -32,7 +32,7 @@ if is_logged_in:
     # QUANDO LOGADO: Mostra todas as opções organizadas com a palavra "Dashboard" idêntica às restantes!
     pages_map = {
         "Navegação": [home_page],
-        "Operação Fabril": [reg_page, gestao_page],
+        "Operações": [reg_page, gestao_page],
         "Gestão & Consulta": [analise_page, est_page, audit_page]
     }
 else:

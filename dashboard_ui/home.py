@@ -35,7 +35,7 @@ st.markdown("---")
 # ==========================================
 # 2º SECÇÃO: ESTADO DOS EQUIPAMENTOS EM TEMPO REAL (3 COLUNAS - 1 POR FÁBRICA)
 # ==========================================
-st.subheader("🏭 Estado dos Equipamentos em Tempo Real")
+st.subheader("🏭 Estado dos Equipamentos")
 
 fabricas_raw = api_client.get_fabricas()
 # Obter até 3 fábricas para as 3 colunas

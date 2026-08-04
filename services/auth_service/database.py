@@ -1,7 +1,13 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
 
-DATABASE_URL = os.getenv("AUTH_DATABASE_URL", "sqlite:///./auth.db")
+DATABASE_URL = os.getenv("AUTH_DATABASE_URL", "sqlite:///./data/auth.db")
+
+if "sqlite" in DATABASE_URL and "///" in DATABASE_URL:
+    db_path = DATABASE_URL.split("///")[-1]
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
 engine = create_engine(
     DATABASE_URL,

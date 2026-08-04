@@ -73,11 +73,25 @@ class Query:
                 responsavel_id=a.responsavel_id
             )
 
+from strawberry.types import Info
+
+def get_user_email(info: Info) -> str:
+    try:
+        req = info.context.get("request")
+        if req and hasattr(req, "headers"):
+            email = req.headers.get("x-user-email")
+            if email:
+                return email
+    except Exception:
+        pass
+    return "operador@inter.ikea.com"
+
 @strawberry.type
 class Mutation:
     @strawberry.mutation
     def criar_acao(
         self,
+        info: Info,
         descricao: str,
         impacto: str,
         sistema_id: int,
@@ -100,7 +114,7 @@ class Mutation:
             session.commit()
             session.refresh(acao)
 
-            publicar_evento_manutencao("acao.criada", acao)
+            publicar_evento_manutencao("acao.criada", acao, get_user_email(info))
 
             return AcaoType(
                 id=acao.id,
@@ -116,6 +130,7 @@ class Mutation:
     @strawberry.mutation
     def fechar_acao(
         self,
+        info: Info,
         id: int,
         data_conclusao: Optional[str] = None,
         comentario: Optional[str] = None
@@ -134,7 +149,7 @@ class Mutation:
             session.commit()
             session.refresh(acao)
 
-            publicar_evento_manutencao("acao.fechada", acao)
+            publicar_evento_manutencao("acao.fechada", acao, get_user_email(info))
 
             return AcaoType(
                 id=acao.id,
@@ -152,6 +167,7 @@ class Mutation:
     @strawberry.mutation
     def editar_acao(
         self,
+        info: Info,
         id: int,
         descricao: Optional[str] = None,
         impacto: Optional[str] = None,
@@ -175,7 +191,7 @@ class Mutation:
             session.commit()
             session.refresh(acao)
 
-            publicar_evento_manutencao("acao.atualizada", acao)
+            publicar_evento_manutencao("acao.atualizada", acao, get_user_email(info))
 
             return AcaoType(
                 id=acao.id,

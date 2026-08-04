@@ -1,6 +1,6 @@
-# 🛠️ Consola de Manutenção Industrial (Microserviços, RabbitMQ & GraphQL Gateway)
+# 🛠️ Consola de Manutenção (Microserviços, RabbitMQ & GraphQL Gateway)
 
-Sistema de gestão e acompanhamento de manutenção industrial para unidades fabris. A plataforma permite monitorizar o estado operacional de equipamentos (🟢 **OPERACIONAL**, 🟡 **DEGRADADO**, 🔴 **PARADO**), gerir intervenções técnicas e auditar alterações através de uma interface intuitiva em Streamlit organizada por fábricas.
+Sistema de gestão e acompanhamento de manutenção para unidades fabris. A plataforma permite monitorizar o estado operacional de equipamentos (🟢 **OPERACIONAL**, 🟡 **DEGRADADO**, 🔴 **PARADO**), gerir intervenções técnicas e auditar alterações através de uma interface intuitiva em Streamlit organizada por fábricas.
 
 A arquitetura do backend é baseada em **Microserviços Orientados a Eventos** com **Database-per-Service**, interligados por **RabbitMQ** (Pub/Sub), semeados por **Bootstrap Condicional Autónomo** e expostos através de um **GraphQL Gateway** unificado.
 

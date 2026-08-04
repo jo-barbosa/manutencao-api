@@ -7,6 +7,7 @@ import httpx
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001/graphql")
 ESTRUTURA_SERVICE_URL = os.getenv("ESTRUTURA_SERVICE_URL", "http://localhost:8002/graphql")
 MANUTENCAO_SERVICE_URL = os.getenv("MANUTENCAO_SERVICE_URL", "http://localhost:8003/graphql")
+AUDITORIA_SERVICE_URL = os.getenv("AUDITORIA_SERVICE_URL", "http://localhost:8004/graphql")
 
 app = FastAPI(title="GraphQL Gateway (Federated Microservices)", version="2.0.0")
 
@@ -37,6 +38,7 @@ ESTRUTURA_KEYWORDS = [
     r"\bfornecedores\b", r"\bcriarFabrica\b", r"\bcriarLinha\b", r"\bcriarSistema\b",
     r"\bcriarFornecedor\b", r"\beditarFornecedor\b"
 ]
+AUDITORIA_KEYWORDS = [r"\bauditoria\b"]
 
 @app.post("/graphql")
 async def graphql_gateway(request: Request):
@@ -49,6 +51,8 @@ async def graphql_gateway(request: Request):
             target = AUTH_SERVICE_URL
         elif any(re.search(kw, query) for kw in ESTRUTURA_KEYWORDS):
             target = ESTRUTURA_SERVICE_URL
+        elif any(re.search(kw, query) for kw in AUDITORIA_KEYWORDS):
+            target = AUDITORIA_SERVICE_URL
         else:
             target = MANUTENCAO_SERVICE_URL
 
@@ -66,6 +70,7 @@ def health():
         "services": {
             "auth": AUTH_SERVICE_URL,
             "estrutura": ESTRUTURA_SERVICE_URL,
-            "manutencao": MANUTENCAO_SERVICE_URL
+            "manutencao": MANUTENCAO_SERVICE_URL,
+            "auditoria": AUDITORIA_SERVICE_URL
         }
     }
